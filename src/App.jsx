@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { excelOperations } from './importedExcelData'
+import { supabase } from './lib/supabaseClient'
 import './App.css'
 
 const initialOperations = excelOperations.map((operation) => ({
@@ -188,6 +189,56 @@ const currencyFormatter = new Intl.NumberFormat('es-AR', {
   maximumFractionDigits: 0,
 })
 
+function mapProductFromDb(product) {
+  return {
+    id: product.id,
+    name: product.name,
+    factory: product.factories?.name || 'Sin fábrica asignada',
+    cost: Number(product.cost) || 0,
+    price: product.price === null ? null : Number(product.price),
+    stock: Number(product.stock) || 0,
+    status: product.status || 'Activo',
+  }
+}
+
+function mapClientFromDb(client) {
+  return {
+    id: client.id,
+    name: client.name,
+    phone: client.phone || '',
+    note: client.note || '',
+  }
+}
+
+function mapOperationFromDb(operation) {
+  const items = operation.operation_items || []
+
+  return {
+    id: operation.id,
+    type: operation.type,
+    date: operation.operation_date,
+    name: operation.name || '',
+    factory: operation.factory_name || operation.factories?.name || '',
+    detail: operation.detail || 'Sin detalle',
+    status: operation.status,
+    purchase: Number(operation.purchase) || 0,
+    payment: Number(operation.payment) || 0,
+    total: Number(operation.total) || 0,
+    additionalExpenses: Number(operation.additional_expenses) || 0,
+    items: items.map((item) => ({
+      id: item.id,
+      productId: item.product_id,
+      productName: item.product_name,
+      factory: item.factory_name || '',
+      quantity: Number(item.quantity) || 1,
+      unitCost: Number(item.unit_cost) || 0,
+      unitPrice: Number(item.unit_price) || 0,
+      linePurchase: Number(item.line_purchase) || 0,
+      lineTotal: Number(item.line_total) || 0,
+    })),
+  }
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState('REGISTRO')
   const [operations, setOperations] = useState(initialOperations)
@@ -195,7 +246,9 @@ function App() {
   const [clients, setClients] = useState(initialClients)
   const [factoryOptions, setFactoryOptions] = useState(initialFactories)
   const [filters, setFilters] = useState(defaultRegisterFilters)
-  const [activityLog, setActivityLog] = useState([])
+  const [saveStatus, setSaveStatus] = useState(
+    supabase ? 'Conectando con Supabase...' : 'Modo local',
+  )
   const [operationFormType, setOperationFormType] = useState(null)
   const [operationForm, setOperationForm] = useState(createEmptyOperationForm)
   const [editingOperationId, setEditingOperationId] = useState(null)
@@ -212,6 +265,54 @@ function App() {
   })
   const [clientSearch, setClientSearch] = useState('')
   const [newFactoryName, setNewFactoryName] = useState('')
+
+  useEffect(() => {
+    async function loadSupabaseData() {
+      if (!supabase) return
+
+      try {
+        const [
+          factoriesResponse,
+          productsResponse,
+          clientsResponse,
+          operationsResponse,
+        ] = await Promise.all([
+          supabase.from('factories').select('id, name').order('name'),
+          supabase
+            .from('products')
+            .select('id, name, cost, price, stock, status, factories(name)')
+            .order('name'),
+          supabase.from('clients').select('id, name, phone, note').order('name'),
+          supabase
+            .from('operations')
+            .select('*, factories(name), operation_items(*)')
+            .order('operation_date', { ascending: false })
+            .order('created_at', { ascending: false }),
+        ])
+
+        if (factoriesResponse.error) throw factoriesResponse.error
+        if (productsResponse.error) throw productsResponse.error
+        if (clientsResponse.error) throw clientsResponse.error
+        if (operationsResponse.error) throw operationsResponse.error
+
+        const dbFactories = factoriesResponse.data.map((factory) => factory.name)
+        const dbProducts = productsResponse.data.map(mapProductFromDb)
+        const dbClients = clientsResponse.data.map(mapClientFromDb)
+        const dbOperations = operationsResponse.data.map(mapOperationFromDb)
+
+        if (dbFactories.length) setFactoryOptions(dbFactories)
+        if (dbProducts.length) setProducts(dbProducts)
+        if (dbClients.length) setClients(dbClients)
+        setOperations([...dbOperations, ...initialOperations])
+        setSaveStatus('Guardado online activo')
+      } catch (error) {
+        console.error(error)
+        setSaveStatus('No se pudo conectar con Supabase')
+      }
+    }
+
+    loadSupabaseData()
+  }, [])
 
   const factories = useMemo(() => {
     const operationFactories = operations.map((operation) => operation.factory)
@@ -382,18 +483,166 @@ function App() {
     setFilters((current) => ({ ...current, [name]: value }))
   }
 
-  function addActivityLog(message) {
-    setActivityLog((current) => [
-      {
-        id: Date.now(),
-        message,
-        time: new Date().toLocaleTimeString('es-AR', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-      },
-      ...current,
-    ].slice(0, 8))
+  async function getFactoryId(factoryName) {
+    if (!supabase || !factoryName) return null
+
+    const cleanName = factoryName.trim()
+    if (!cleanName) return null
+
+    const { data: existingFactory, error: findError } = await supabase
+      .from('factories')
+      .select('id')
+      .eq('name', cleanName)
+      .maybeSingle()
+
+    if (findError) throw findError
+    if (existingFactory) return existingFactory.id
+
+    const { data: newFactory, error: insertError } = await supabase
+      .from('factories')
+      .insert({ name: cleanName })
+      .select('id')
+      .single()
+
+    if (insertError) throw insertError
+
+    setFactoryOptions((current) =>
+      current.some((factory) => factory.toLowerCase() === cleanName.toLowerCase())
+        ? current
+        : [...current, cleanName],
+    )
+
+    return newFactory.id
+  }
+
+  async function saveProductToSupabase(product) {
+    if (!supabase) return product
+
+    const factoryId = await getFactoryId(product.factory)
+    const payload = {
+      name: product.name,
+      factory_id: factoryId,
+      cost: product.cost,
+      price: product.price,
+      stock: product.stock,
+      status: product.status,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (typeof product.id === 'string') {
+      const { error } = await supabase
+        .from('products')
+        .update(payload)
+        .eq('id', product.id)
+      if (error) throw error
+      return product
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert(payload)
+      .select('id')
+      .single()
+
+    if (error) throw error
+
+    return { ...product, id: data.id }
+  }
+
+  async function saveClientToSupabase(client) {
+    if (!supabase) return client
+
+    const payload = {
+      name: client.name,
+      phone: client.phone,
+      note: client.note,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (typeof client.id === 'string') {
+      const { error } = await supabase
+        .from('clients')
+        .update(payload)
+        .eq('id', client.id)
+      if (error) throw error
+      return client
+    }
+
+    const { data, error } = await supabase
+      .from('clients')
+      .insert(payload)
+      .select('id')
+      .single()
+
+    if (error) throw error
+
+    return { ...client, id: data.id }
+  }
+
+  async function saveOperationToSupabase(operation) {
+    if (!supabase) return operation
+
+    const factoryId = await getFactoryId(operation.factory)
+    const payload = {
+      operation_date: operation.date,
+      type: operation.type,
+      factory_id: factoryId,
+      name: operation.name,
+      factory_name: operation.factory,
+      detail: operation.detail,
+      status: operation.status,
+      purchase: operation.purchase,
+      payment: operation.payment,
+      total: operation.total,
+      additional_expenses: operation.additionalExpenses,
+      updated_at: new Date().toISOString(),
+    }
+
+    let savedOperation = operation
+
+    if (typeof operation.id === 'string') {
+      const { error } = await supabase
+        .from('operations')
+        .update(payload)
+        .eq('id', operation.id)
+      if (error) throw error
+
+      const { error: deleteItemsError } = await supabase
+        .from('operation_items')
+        .delete()
+        .eq('operation_id', operation.id)
+      if (deleteItemsError) throw deleteItemsError
+    } else {
+      const { data, error } = await supabase
+        .from('operations')
+        .insert(payload)
+        .select('id')
+        .single()
+
+      if (error) throw error
+
+      savedOperation = { ...operation, id: data.id }
+    }
+
+    if (savedOperation.items.length) {
+      const { error: itemsError } = await supabase.from('operation_items').insert(
+        savedOperation.items.map((item) => ({
+          operation_id: savedOperation.id,
+          product_id: typeof item.productId === 'string' ? item.productId : null,
+          product_name: item.productName,
+          factory_name: item.factory,
+          quantity: item.quantity,
+          unit_cost: item.unitCost,
+          unit_price: item.unitPrice,
+          line_purchase: item.linePurchase,
+          line_total: item.lineTotal,
+        })),
+      )
+
+      if (itemsError) throw itemsError
+    }
+
+    return savedOperation
   }
 
   function openOperationForm(type) {
@@ -445,7 +694,7 @@ function App() {
     })
   }
 
-  function addOperation(event) {
+  async function addOperation(event) {
     event.preventDefault()
     const itemTotals = getOperationItemTotals(operationForm.items)
     const additionalExpenses = Number(operationForm.additionalExpenses) || 0
@@ -482,36 +731,60 @@ function App() {
       items: operationForm.items,
     }
 
-    setOperations((current) => {
-      if (editingOperationId) {
-        return current.map((currentOperation) =>
-          currentOperation.id === editingOperationId ? operation : currentOperation,
-        )
-      }
+    try {
+      const savedOperation = await saveOperationToSupabase(operation)
 
-      return [operation, ...current]
-    })
-    addActivityLog(
-      `${editingOperationId ? 'Editado' : 'Cargado'}: ${operation.type === 'compra' ? 'compra' : 'venta'} · ${operation.name || operation.factory || 'sin cliente'} · ${operation.status}`,
-    )
+      setOperations((current) => {
+        if (editingOperationId) {
+          return current.map((currentOperation) =>
+            currentOperation.id === editingOperationId
+              ? savedOperation
+              : currentOperation,
+          )
+        }
+
+        return [savedOperation, ...current]
+      })
+      setSaveStatus('Guardado online activo')
+    } catch (error) {
+      console.error(error)
+      window.alert('No se pudo guardar en Supabase. Revisá la conexión y probá de nuevo.')
+      setSaveStatus('Error al guardar en Supabase')
+      return
+    }
+
     setFilters(defaultRegisterFilters)
     setOperationFormType(null)
     setEditingOperationId(null)
   }
 
-  function removeOperation(operation) {
+  async function removeOperation(operation) {
     const confirmed = window.confirm(
       `¿Eliminar esta ${operation.type === 'compra' ? 'compra' : 'venta'}? Esta acción no modifica productos ni clientes.`,
     )
 
     if (!confirmed) return
 
-    setOperations((current) =>
-      current.filter((currentOperation) => currentOperation.id !== operation.id),
-    )
-    addActivityLog(
-      `Eliminado: ${operation.type === 'compra' ? 'compra' : 'venta'} · ${operation.name || operation.factory || 'sin cliente'} · ${operation.status}`,
-    )
+    try {
+      if (supabase && typeof operation.id === 'string') {
+        const { error } = await supabase
+          .from('operations')
+          .delete()
+          .eq('id', operation.id)
+        if (error) throw error
+      }
+
+      setOperations((current) =>
+        current.filter((currentOperation) => currentOperation.id !== operation.id),
+      )
+      setSaveStatus('Guardado online activo')
+    } catch (error) {
+      console.error(error)
+      window.alert('No se pudo eliminar en Supabase. Revisá la conexión y probá de nuevo.')
+      setSaveStatus('Error al eliminar en Supabase')
+      return
+    }
+
     setFilters(defaultRegisterFilters)
   }
 
@@ -631,7 +904,7 @@ function App() {
     setProductForm(emptyProductForm)
   }
 
-  function removeProduct(productId) {
+  async function removeProduct(productId) {
     const product = products.find((currentProduct) => currentProduct.id === productId)
     if (!product) return
 
@@ -641,12 +914,27 @@ function App() {
 
     if (!confirmed) return
 
-    setProducts((current) =>
-      current.filter((currentProduct) => currentProduct.id !== productId),
-    )
+    try {
+      if (supabase && typeof productId === 'string') {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', productId)
+        if (error) throw error
+      }
+
+      setProducts((current) =>
+        current.filter((currentProduct) => currentProduct.id !== productId),
+      )
+      setSaveStatus('Guardado online activo')
+    } catch (error) {
+      console.error(error)
+      window.alert('No se pudo eliminar el producto en Supabase.')
+      setSaveStatus('Error al eliminar en Supabase')
+    }
   }
 
-  function saveProduct(event) {
+  async function saveProduct(event) {
     event.preventDefault()
 
     const product = {
@@ -659,13 +947,24 @@ function App() {
       status: productForm.status,
     }
 
-    setProducts((current) => {
-      if (!editingProductId) return [product, ...current]
+    try {
+      const savedProduct = await saveProductToSupabase(product)
 
-      return current.map((currentProduct) =>
-        currentProduct.id === editingProductId ? product : currentProduct,
-      )
-    })
+      setProducts((current) => {
+        if (!editingProductId) return [savedProduct, ...current]
+
+        return current.map((currentProduct) =>
+          currentProduct.id === editingProductId ? savedProduct : currentProduct,
+        )
+      })
+      setSaveStatus('Guardado online activo')
+    } catch (error) {
+      console.error(error)
+      window.alert('No se pudo guardar el producto en Supabase.')
+      setSaveStatus('Error al guardar en Supabase')
+      return
+    }
+
     setProductFilters((current) => ({
       ...current,
       status: 'Todos',
@@ -674,7 +973,7 @@ function App() {
     closeProductForm()
   }
 
-  function addFactory(event) {
+  async function addFactory(event) {
     event.preventDefault()
 
     const cleanName = newFactoryName.trim()
@@ -684,8 +983,17 @@ function App() {
       (factory) => factory.toLowerCase() === cleanName.toLowerCase(),
     )
 
-    if (!alreadyExists) {
-      setFactoryOptions((current) => [...current, cleanName])
+    try {
+      await getFactoryId(cleanName)
+      if (!alreadyExists) {
+        setFactoryOptions((current) => [...current, cleanName])
+      }
+      setSaveStatus('Guardado online activo')
+    } catch (error) {
+      console.error(error)
+      window.alert('No se pudo guardar la fábrica en Supabase.')
+      setSaveStatus('Error al guardar en Supabase')
+      return
     }
 
     setEditingProductId(null)
@@ -698,7 +1006,7 @@ function App() {
     setClientForm((current) => ({ ...current, [name]: value }))
   }
 
-  function addClient(event) {
+  async function addClient(event) {
     event.preventDefault()
 
     const client = {
@@ -708,12 +1016,22 @@ function App() {
       note: clientForm.note.trim(),
     }
 
-    setClients((current) => [client, ...current])
+    try {
+      const savedClient = await saveClientToSupabase(client)
+      setClients((current) => [savedClient, ...current])
+      setSaveStatus('Guardado online activo')
+    } catch (error) {
+      console.error(error)
+      window.alert('No se pudo guardar el cliente en Supabase.')
+      setSaveStatus('Error al guardar en Supabase')
+      return
+    }
+
     setClientForm(emptyClientForm)
     setShowClientForm(false)
   }
 
-  function removeClient(client) {
+  async function removeClient(client) {
     if (client.pending > 0) {
       window.alert('Este cliente todavía tiene saldo pendiente. Primero registrá el pago para poder eliminarlo.')
       return
@@ -725,9 +1043,24 @@ function App() {
 
     if (!confirmed) return
 
-    setClients((current) =>
-      current.filter((currentClient) => currentClient.id !== client.id),
-    )
+    try {
+      if (supabase && typeof client.id === 'string') {
+        const { error } = await supabase
+          .from('clients')
+          .delete()
+          .eq('id', client.id)
+        if (error) throw error
+      }
+
+      setClients((current) =>
+        current.filter((currentClient) => currentClient.id !== client.id),
+      )
+      setSaveStatus('Guardado online activo')
+    } catch (error) {
+      console.error(error)
+      window.alert('No se pudo eliminar el cliente en Supabase.')
+      setSaveStatus('Error al eliminar en Supabase')
+    }
   }
 
   return (
@@ -736,6 +1069,7 @@ function App() {
         <div>
           <p className="eyebrow">Sistema de compras y ventas</p>
           <h1>{activeTab}</h1>
+          <p className="save-status">{saveStatus}</p>
         </div>
 
         <nav className="main-nav" aria-label="Secciones principales">
@@ -755,7 +1089,6 @@ function App() {
       {activeTab === 'REGISTRO' && (
         <RegisterView
           clients={clientOptions}
-          activityLog={activityLog}
           factories={factories}
           filters={filters}
           form={operationForm}
@@ -821,7 +1154,6 @@ function App() {
 }
 
 function RegisterView({
-  activityLog,
   clients,
   factories,
   filters,
@@ -1174,25 +1506,6 @@ function RegisterView({
           ['Saldo', formatCurrency(totals.balanceTotal)],
         ]}
       />
-
-      <section className="activity-log" aria-label="Últimos cambios">
-        <div>
-          <h2>Últimos cambios</h2>
-          <span>Se registran las altas, ediciones y eliminaciones de esta sesión.</span>
-        </div>
-        {activityLog.length === 0 ? (
-          <p>Todavía no hubo cambios.</p>
-        ) : (
-          <ul>
-            {activityLog.map((item) => (
-              <li key={item.id}>
-                <strong>{item.time}</strong>
-                <span>{item.message}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
 
       <TableWrap label="Tabla de registro">
         <table>
