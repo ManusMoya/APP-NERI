@@ -205,6 +205,14 @@ function readStoredValue(key, fallbackValue) {
   }
 }
 
+function hasStoredValue(key) {
+  try {
+    return window.localStorage.getItem(key) !== null
+  } catch {
+    return false
+  }
+}
+
 function writeStoredValue(key, value) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value))
@@ -316,6 +324,9 @@ function mapOperationFromDb(operation) {
 
 function App() {
   const [activeTab, setActiveTab] = useState('REGISTRO')
+  const [hadStoredOperations] = useState(() =>
+    hasStoredValue(storageKeys.operations),
+  )
   const [operations, setOperations] = useState(() =>
     readStoredValue(storageKeys.operations, initialOperations),
   )
@@ -422,9 +433,11 @@ function App() {
             mergeByKey(dbClients, current, getClientKey),
           )
         }
-        setOperations((current) =>
-          mergeByKey(dbOperations, current, getOperationKey),
-        )
+        setOperations((current) => {
+          if (dbOperations.length >= initialOperations.length) return dbOperations
+          if (!hadStoredOperations && dbOperations.length) return dbOperations
+          return mergeByKey(dbOperations, current, getOperationKey)
+        })
         setSaveStatus('Guardado online activo')
         setHasLoadedSupabase(true)
       } catch (error) {
@@ -434,7 +447,7 @@ function App() {
     }
 
     loadSupabaseData()
-  }, [])
+  }, [hadStoredOperations])
 
   useEffect(() => {
     async function syncLocalDataToSupabase() {
