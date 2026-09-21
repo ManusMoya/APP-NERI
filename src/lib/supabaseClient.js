@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 const fallbackSupabaseUrl = 'https://omxwqafftdwylqexxkga.supabase.co'
-const fallbackSupabaseAnonKey = 'sb_publishable_AbFZhAoI3m3plIvMW4piNw_NKIJiqHd'
+const fallbackSupabaseAnonKey = 'sb_publishable_AbFZhAoI3m3pIlvMW4piNw_NKlJiqHd'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || fallbackSupabaseUrl
 const supabaseAnonKey =
