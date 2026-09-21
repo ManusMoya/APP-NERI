@@ -134,6 +134,13 @@ const operationStatuses = [
 ]
 const statusFilters = ['Todos', ...operationStatuses]
 const productStatusFilters = ['Todos', 'Activo', 'Revisar', 'Sin stock']
+const defaultRegisterFilters = {
+  search: '',
+  factory: 'Todas',
+  status: 'Todos',
+  from: '',
+  to: '',
+}
 
 function createEmptyOperationForm() {
   return {
@@ -187,13 +194,8 @@ function App() {
   const [products, setProducts] = useState(catalogProducts)
   const [clients, setClients] = useState(initialClients)
   const [factoryOptions, setFactoryOptions] = useState(initialFactories)
-  const [filters, setFilters] = useState({
-    search: '',
-    factory: 'Todas',
-    status: 'Todos',
-    from: '',
-    to: '',
-  })
+  const [filters, setFilters] = useState(defaultRegisterFilters)
+  const [activityLog, setActivityLog] = useState([])
   const [operationFormType, setOperationFormType] = useState(null)
   const [operationForm, setOperationForm] = useState(createEmptyOperationForm)
   const [editingOperationId, setEditingOperationId] = useState(null)
@@ -380,6 +382,20 @@ function App() {
     setFilters((current) => ({ ...current, [name]: value }))
   }
 
+  function addActivityLog(message) {
+    setActivityLog((current) => [
+      {
+        id: Date.now(),
+        message,
+        time: new Date().toLocaleTimeString('es-AR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      },
+      ...current,
+    ].slice(0, 8))
+  }
+
   function openOperationForm(type) {
     setOperationFormType(type)
     setEditingOperationId(null)
@@ -475,6 +491,10 @@ function App() {
 
       return [operation, ...current]
     })
+    addActivityLog(
+      `${editingOperationId ? 'Editado' : 'Cargado'}: ${operation.type === 'compra' ? 'compra' : 'venta'} · ${operation.name || operation.factory || 'sin cliente'} · ${operation.status}`,
+    )
+    setFilters(defaultRegisterFilters)
     setOperationFormType(null)
     setEditingOperationId(null)
   }
@@ -489,6 +509,10 @@ function App() {
     setOperations((current) =>
       current.filter((currentOperation) => currentOperation.id !== operation.id),
     )
+    addActivityLog(
+      `Eliminado: ${operation.type === 'compra' ? 'compra' : 'venta'} · ${operation.name || operation.factory || 'sin cliente'} · ${operation.status}`,
+    )
+    setFilters(defaultRegisterFilters)
   }
 
   function addOperationItem(event) {
@@ -642,6 +666,11 @@ function App() {
         currentProduct.id === editingProductId ? product : currentProduct,
       )
     })
+    setProductFilters((current) => ({
+      ...current,
+      status: 'Todos',
+      price: 'Todos',
+    }))
     closeProductForm()
   }
 
@@ -726,6 +755,7 @@ function App() {
       {activeTab === 'REGISTRO' && (
         <RegisterView
           clients={clientOptions}
+          activityLog={activityLog}
           factories={factories}
           filters={filters}
           form={operationForm}
@@ -791,6 +821,7 @@ function App() {
 }
 
 function RegisterView({
+  activityLog,
   clients,
   factories,
   filters,
@@ -1143,6 +1174,25 @@ function RegisterView({
           ['Saldo', formatCurrency(totals.balanceTotal)],
         ]}
       />
+
+      <section className="activity-log" aria-label="Últimos cambios">
+        <div>
+          <h2>Últimos cambios</h2>
+          <span>Se registran las altas, ediciones y eliminaciones de esta sesión.</span>
+        </div>
+        {activityLog.length === 0 ? (
+          <p>Todavía no hubo cambios.</p>
+        ) : (
+          <ul>
+            {activityLog.map((item) => (
+              <li key={item.id}>
+                <strong>{item.time}</strong>
+                <span>{item.message}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <TableWrap label="Tabla de registro">
         <table>

@@ -125,6 +125,7 @@ button {
 .entry-form,
 .filters,
 .factory-strip,
+.activity-log,
 .summary-row,
 .table-wrap,
 .placeholder-view {
@@ -323,6 +324,47 @@ button:focus-visible {
 .summary-row strong {
   color: var(--text);
   font-size: 18px;
+}
+
+.activity-log {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.activity-log div {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.activity-log span,
+.activity-log p {
+  color: var(--muted);
+}
+
+.activity-log p {
+  margin: 0;
+}
+
+.activity-log ul {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.activity-log li {
+  align-items: baseline;
+  display: flex;
+  gap: 12px;
+}
+
+.activity-log li strong {
+  color: var(--text);
+  min-width: 48px;
 }
 
 .table-wrap {
