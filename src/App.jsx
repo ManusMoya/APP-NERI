@@ -69,7 +69,7 @@ const initialProducts = [
 
 const catalogProducts = initialProducts.map((product) => ({
   ...product,
-  factory: /bicicleta/i.test(product.name) ? 'Enrique Bicicletas' : 'Reginales FDL',
+  factory: /bicicleta/i.test(product.name) ? 'Enrique Bicicletas' : 'Regionales FDL',
 }))
 
 const initialClients = [
@@ -117,7 +117,7 @@ const initialClients = [
 
 const initialFactories = [
   'Alpargatas Argentinas',
-  'Reginales FDL',
+  'Regionales FDL',
   'Enrique Bicicletas',
   'Fiorentino',
   'Marroquinería',
@@ -447,7 +447,7 @@ function App() {
       id: operationId,
       type: operationFormType,
       date: operationForm.date,
-      name: operationForm.name.trim(),
+      name: operationFormType === 'compra' ? '' : operationForm.name.trim(),
       factory:
         operationForm.factory.trim() ||
         summarizeItemFactories(operationForm.items),
@@ -457,7 +457,10 @@ function App() {
         'Sin detalle',
       status: operationForm.status,
       purchase: Number(operationForm.purchase) || calculatedPurchase,
-      payment: Number(operationForm.payment) || 0,
+      payment:
+        operationFormType === 'compra'
+          ? 0
+          : Number(operationForm.payment) || 0,
       total: Number(operationForm.total) || calculatedTotal,
       additionalExpenses,
       items: operationForm.items,
@@ -474,6 +477,18 @@ function App() {
     })
     setOperationFormType(null)
     setEditingOperationId(null)
+  }
+
+  function removeOperation(operation) {
+    const confirmed = window.confirm(
+      `¿Eliminar esta ${operation.type === 'compra' ? 'compra' : 'venta'}? Esta acción no modifica productos ni clientes.`,
+    )
+
+    if (!confirmed) return
+
+    setOperations((current) =>
+      current.filter((currentOperation) => currentOperation.id !== operation.id),
+    )
   }
 
   function addOperationItem(event) {
@@ -724,6 +739,7 @@ function App() {
           }}
           onOpenForm={openOperationForm}
           onOpenEdit={openEditOperation}
+          onRemoveOperation={removeOperation}
           onRemoveProductItem={removeOperationItem}
           onUpdateFilter={updateFilter}
           onUpdateForm={updateOperationForm}
@@ -786,6 +802,7 @@ function RegisterView({
   onCloseForm,
   onOpenForm,
   onOpenEdit,
+  onRemoveOperation,
   onRemoveProductItem,
   onUpdateFilter,
   onUpdateForm,
@@ -862,16 +879,20 @@ function RegisterView({
                   value={form.date}
                 />
               </label>
-              <label>
-                Cliente / fábrica
-                <input
-                  list="client-options"
-                  onChange={(event) => onUpdateForm('name', event.target.value)}
-                  placeholder="Ej: María López"
-                  required
-                  value={form.name}
-                />
-              </label>
+              {formType === 'venta' && (
+                <label>
+                  Cliente
+                  <input
+                    list="client-options"
+                    onChange={(event) =>
+                      onUpdateForm('name', event.target.value)
+                    }
+                    placeholder="Ej: María López"
+                    required
+                    value={form.name}
+                  />
+                </label>
+              )}
               <label>
                 Fábrica
                 <input
@@ -928,18 +949,20 @@ function RegisterView({
                   value={form.purchase}
                 />
               </label>
-              <label>
-                Pago
-                <input
-                  min="0"
-                  onChange={(event) =>
-                    onUpdateForm('payment', event.target.value)
-                  }
-                  placeholder="0"
-                  type="number"
-                  value={form.payment}
-                />
-              </label>
+              {formType === 'venta' && (
+                <label>
+                  Pago
+                  <input
+                    min="0"
+                    onChange={(event) =>
+                      onUpdateForm('payment', event.target.value)
+                    }
+                    placeholder="0"
+                    type="number"
+                    value={form.payment}
+                  />
+                </label>
+              )}
               {formType === 'compra' && (
                 <label>
                   Gastos adicionales
@@ -1149,18 +1172,31 @@ function RegisterView({
                   <small>{operation.status}</small>
                 </td>
                 <td data-label="Compra">{formatCurrency(operation.purchase)}</td>
-                <td data-label="Pago">{formatCurrency(operation.payment)}</td>
+                <td data-label="Pago">
+                  {operation.type === 'compra'
+                    ? ''
+                    : formatCurrency(operation.payment)}
+                </td>
                 <td data-label="Total">
                   <strong>{formatCurrency(operation.total)}</strong>
                 </td>
                 <td data-label="Acción">
-                  <button
-                    className="table-action"
-                    onClick={() => onOpenEdit(operation)}
-                    type="button"
-                  >
-                    Editar
-                  </button>
+                  <div className="table-actions">
+                    <button
+                      className="table-action"
+                      onClick={() => onOpenEdit(operation)}
+                      type="button"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="table-action"
+                      onClick={() => onRemoveOperation(operation)}
+                      type="button"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -1680,3 +1716,4 @@ function formatDate(value) {
 }
 
 export default App
+
