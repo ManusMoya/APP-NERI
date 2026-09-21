@@ -213,6 +213,39 @@ function writeStoredValue(key, value) {
   }
 }
 
+function canonicalFactoryName(factoryName) {
+  return factoryName === 'Reginales FDL' ? 'Regionales FDL' : factoryName
+}
+
+function normalizeText(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+function getProductKey(product) {
+  return `${normalizeText(product.name)}|${normalizeText(canonicalFactoryName(product.factory))}`
+}
+
+function getClientKey(client) {
+  return normalizeText(client.name)
+}
+
+function getOperationKey(operation) {
+  return [
+    operation.date,
+    operation.type,
+    normalizeText(operation.name),
+    normalizeText(canonicalFactoryName(operation.factory)),
+    normalizeText(operation.detail),
+    Number(operation.purchase) || 0,
+    Number(operation.payment) || 0,
+    Number(operation.total) || 0,
+  ].join('|')
+}
+
 function mergeByKey(primaryItems, secondaryItems, getKey) {
   const usedKeys = new Set(primaryItems.map(getKey))
   return [
@@ -221,11 +254,21 @@ function mergeByKey(primaryItems, secondaryItems, getKey) {
   ]
 }
 
+function uniqueByKey(items, getKey) {
+  const usedKeys = new Set()
+  return items.filter((item) => {
+    const key = getKey(item)
+    if (usedKeys.has(key)) return false
+    usedKeys.add(key)
+    return true
+  })
+}
+
 function mapProductFromDb(product) {
   return {
     id: product.id,
     name: product.name,
-    factory: product.factories?.name || 'Sin fábrica asignada',
+    factory: canonicalFactoryName(product.factories?.name || 'Sin fábrica asignada'),
     cost: Number(product.cost) || 0,
     price: product.price === null ? null : Number(product.price),
     stock: Number(product.stock) || 0,
@@ -305,6 +348,8 @@ function App() {
   })
   const [clientSearch, setClientSearch] = useState('')
   const [newFactoryName, setNewFactoryName] = useState('')
+  const [hasLoadedSupabase, setHasLoadedSupabase] = useState(false)
+  const [hasSyncedLocalData, setHasSyncedLocalData] = useState(false)
 
   function markLocalSave() {
     setSaveStatus('Guardado en este navegador')
@@ -355,30 +400,33 @@ function App() {
         if (clientsResponse.error) throw clientsResponse.error
         if (operationsResponse.error) throw operationsResponse.error
 
-        const dbFactories = factoriesResponse.data.map((factory) => factory.name)
+        const dbFactories = factoriesResponse.data.map((factory) =>
+          canonicalFactoryName(factory.name),
+        )
         const dbProducts = productsResponse.data.map(mapProductFromDb)
         const dbClients = clientsResponse.data.map(mapClientFromDb)
         const dbOperations = operationsResponse.data.map(mapOperationFromDb)
 
         if (dbFactories.length) {
           setFactoryOptions((current) =>
-            mergeByKey(dbFactories, current, (factory) => factory.toLowerCase()),
+            mergeByKey(dbFactories, current.map(canonicalFactoryName), normalizeText),
           )
         }
         if (dbProducts.length) {
           setProducts((current) =>
-            mergeByKey(dbProducts, current, (product) => String(product.id)),
+            mergeByKey(dbProducts, current, getProductKey),
           )
         }
         if (dbClients.length) {
           setClients((current) =>
-            mergeByKey(dbClients, current, (client) => String(client.id)),
+            mergeByKey(dbClients, current, getClientKey),
           )
         }
         setOperations((current) =>
-          mergeByKey(dbOperations, current, (operation) => String(operation.id)),
+          mergeByKey(dbOperations, current, getOperationKey),
         )
         setSaveStatus('Guardado online activo')
+        setHasLoadedSupabase(true)
       } catch (error) {
         console.error(error)
         setSaveStatus('No se pudo conectar con Supabase')
@@ -387,6 +435,129 @@ function App() {
 
     loadSupabaseData()
   }, [])
+
+  useEffect(() => {
+    async function syncLocalDataToSupabase() {
+      if (!supabase || !hasLoadedSupabase || hasSyncedLocalData) return
+
+      setHasSyncedLocalData(true)
+      setSaveStatus('Sincronizando datos...')
+
+      try {
+        const cleanFactories = uniqueByKey(
+          factoryOptions.map(canonicalFactoryName),
+          normalizeText,
+        )
+
+        for (const factory of cleanFactories) {
+          if (factory && factory !== 'Todas') await getFactoryId(factory)
+        }
+
+        const onlineProducts = products.filter(
+          (product) => typeof product.id === 'string',
+        )
+        const productByKey = new Map(
+          onlineProducts.map((product) => [getProductKey(product), product]),
+        )
+        const syncedProducts = []
+
+        for (const product of products.map((currentProduct) => ({
+          ...currentProduct,
+          factory: canonicalFactoryName(currentProduct.factory),
+        }))) {
+          const key = getProductKey(product)
+          const existingProduct = productByKey.get(key)
+
+          if (existingProduct) {
+            syncedProducts.push(existingProduct)
+            continue
+          }
+
+          const savedProduct =
+            typeof product.id === 'string'
+              ? product
+              : await saveProductToSupabase(product)
+          productByKey.set(key, savedProduct)
+          syncedProducts.push(savedProduct)
+        }
+
+        const onlineClients = clients.filter((client) => typeof client.id === 'string')
+        const clientByKey = new Map(
+          onlineClients.map((client) => [getClientKey(client), client]),
+        )
+        const syncedClients = []
+
+        for (const client of clients) {
+          const key = getClientKey(client)
+          const existingClient = clientByKey.get(key)
+
+          if (existingClient) {
+            syncedClients.push(existingClient)
+            continue
+          }
+
+          const savedClient =
+            typeof client.id === 'string' ? client : await saveClientToSupabase(client)
+          clientByKey.set(key, savedClient)
+          syncedClients.push(savedClient)
+        }
+
+        const onlineOperations = operations.filter(
+          (operation) => typeof operation.id === 'string',
+        )
+        const operationByKey = new Map(
+          onlineOperations.map((operation) => [getOperationKey(operation), operation]),
+        )
+        const syncedOperations = []
+
+        for (const operation of operations.map((currentOperation) => ({
+          ...currentOperation,
+          factory: canonicalFactoryName(currentOperation.factory),
+          items: (currentOperation.items || []).map((item) => ({
+            ...item,
+            factory: canonicalFactoryName(item.factory),
+          })),
+        }))) {
+          const key = getOperationKey(operation)
+          const existingOperation = operationByKey.get(key)
+
+          if (existingOperation) {
+            syncedOperations.push(existingOperation)
+            continue
+          }
+
+          const savedOperation =
+            typeof operation.id === 'string'
+              ? operation
+              : await saveOperationToSupabase(operation)
+          operationByKey.set(key, savedOperation)
+          syncedOperations.push(savedOperation)
+        }
+
+        setFactoryOptions(cleanFactories)
+        setProducts(uniqueByKey(syncedProducts, getProductKey))
+        setClients(uniqueByKey(syncedClients, getClientKey))
+        setOperations(
+          uniqueByKey(syncedOperations, getOperationKey).sort(
+            (a, b) => new Date(b.date) - new Date(a.date),
+          ),
+        )
+        setSaveStatus('Guardado online activo')
+      } catch (error) {
+        console.error(error)
+        setSaveStatus('Guardado en este navegador')
+      }
+    }
+
+    syncLocalDataToSupabase()
+  }, [
+    clients,
+    factoryOptions,
+    hasLoadedSupabase,
+    hasSyncedLocalData,
+    operations,
+    products,
+  ])
 
   const factories = useMemo(() => {
     const operationFactories = operations.map((operation) => operation.factory)
