@@ -515,46 +515,9 @@ function App() {
           syncedClients.push(savedClient)
         }
 
-        const onlineOperations = operations.filter(
-          (operation) => typeof operation.id === 'string',
-        )
-        const operationByKey = new Map(
-          onlineOperations.map((operation) => [getOperationKey(operation), operation]),
-        )
-        const syncedOperations = []
-
-        for (const operation of operations.map((currentOperation) => ({
-          ...currentOperation,
-          factory: canonicalFactoryName(currentOperation.factory),
-          items: (currentOperation.items || []).map((item) => ({
-            ...item,
-            factory: canonicalFactoryName(item.factory),
-          })),
-        }))) {
-          const key = getOperationKey(operation)
-          const existingOperation = operationByKey.get(key)
-
-          if (existingOperation) {
-            syncedOperations.push(existingOperation)
-            continue
-          }
-
-          const savedOperation =
-            typeof operation.id === 'string'
-              ? operation
-              : await saveOperationToSupabase(operation)
-          operationByKey.set(key, savedOperation)
-          syncedOperations.push(savedOperation)
-        }
-
         setFactoryOptions(cleanFactories)
         setProducts(uniqueByKey(syncedProducts, getProductKey))
         setClients(uniqueByKey(syncedClients, getClientKey))
-        setOperations(
-          uniqueByKey(syncedOperations, getOperationKey).sort(
-            (a, b) => new Date(b.date) - new Date(a.date),
-          ),
-        )
         setSaveStatus('Guardado online activo')
       } catch (error) {
         console.error(error)
@@ -568,7 +531,6 @@ function App() {
     factoryOptions,
     hasLoadedSupabase,
     hasSyncedLocalData,
-    operations,
     products,
   ])
 
