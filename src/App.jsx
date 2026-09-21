@@ -189,6 +189,38 @@ const currencyFormatter = new Intl.NumberFormat('es-AR', {
   maximumFractionDigits: 0,
 })
 
+const storageKeys = {
+  clients: 'app-neri-clients',
+  factories: 'app-neri-factories',
+  operations: 'app-neri-operations',
+  products: 'app-neri-products',
+}
+
+function readStoredValue(key, fallbackValue) {
+  try {
+    const storedValue = window.localStorage.getItem(key)
+    return storedValue ? JSON.parse(storedValue) : fallbackValue
+  } catch {
+    return fallbackValue
+  }
+}
+
+function writeStoredValue(key, value) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // If browser storage is unavailable, the app still works during the session.
+  }
+}
+
+function mergeByKey(primaryItems, secondaryItems, getKey) {
+  const usedKeys = new Set(primaryItems.map(getKey))
+  return [
+    ...primaryItems,
+    ...secondaryItems.filter((item) => !usedKeys.has(getKey(item))),
+  ]
+}
+
 function mapProductFromDb(product) {
   return {
     id: product.id,
@@ -241,13 +273,21 @@ function mapOperationFromDb(operation) {
 
 function App() {
   const [activeTab, setActiveTab] = useState('REGISTRO')
-  const [operations, setOperations] = useState(initialOperations)
-  const [products, setProducts] = useState(catalogProducts)
-  const [clients, setClients] = useState(initialClients)
-  const [factoryOptions, setFactoryOptions] = useState(initialFactories)
+  const [operations, setOperations] = useState(() =>
+    readStoredValue(storageKeys.operations, initialOperations),
+  )
+  const [products, setProducts] = useState(() =>
+    readStoredValue(storageKeys.products, catalogProducts),
+  )
+  const [clients, setClients] = useState(() =>
+    readStoredValue(storageKeys.clients, initialClients),
+  )
+  const [factoryOptions, setFactoryOptions] = useState(() =>
+    readStoredValue(storageKeys.factories, initialFactories),
+  )
   const [filters, setFilters] = useState(defaultRegisterFilters)
   const [saveStatus, setSaveStatus] = useState(
-    supabase ? 'Conectando con Supabase...' : 'Modo local',
+    supabase ? 'Conectando con Supabase...' : 'Guardado local',
   )
   const [operationFormType, setOperationFormType] = useState(null)
   const [operationForm, setOperationForm] = useState(createEmptyOperationForm)
@@ -265,6 +305,26 @@ function App() {
   })
   const [clientSearch, setClientSearch] = useState('')
   const [newFactoryName, setNewFactoryName] = useState('')
+
+  function markLocalSave() {
+    setSaveStatus('Guardado en este navegador')
+  }
+
+  useEffect(() => {
+    writeStoredValue(storageKeys.operations, operations)
+  }, [operations])
+
+  useEffect(() => {
+    writeStoredValue(storageKeys.products, products)
+  }, [products])
+
+  useEffect(() => {
+    writeStoredValue(storageKeys.clients, clients)
+  }, [clients])
+
+  useEffect(() => {
+    writeStoredValue(storageKeys.factories, factoryOptions)
+  }, [factoryOptions])
 
   useEffect(() => {
     async function loadSupabaseData() {
@@ -300,10 +360,24 @@ function App() {
         const dbClients = clientsResponse.data.map(mapClientFromDb)
         const dbOperations = operationsResponse.data.map(mapOperationFromDb)
 
-        if (dbFactories.length) setFactoryOptions(dbFactories)
-        if (dbProducts.length) setProducts(dbProducts)
-        if (dbClients.length) setClients(dbClients)
-        setOperations([...dbOperations, ...initialOperations])
+        if (dbFactories.length) {
+          setFactoryOptions((current) =>
+            mergeByKey(dbFactories, current, (factory) => factory.toLowerCase()),
+          )
+        }
+        if (dbProducts.length) {
+          setProducts((current) =>
+            mergeByKey(dbProducts, current, (product) => String(product.id)),
+          )
+        }
+        if (dbClients.length) {
+          setClients((current) =>
+            mergeByKey(dbClients, current, (client) => String(client.id)),
+          )
+        }
+        setOperations((current) =>
+          mergeByKey(dbOperations, current, (operation) => String(operation.id)),
+        )
         setSaveStatus('Guardado online activo')
       } catch (error) {
         console.error(error)
@@ -731,26 +805,29 @@ function App() {
       items: operationForm.items,
     }
 
+    setOperations((current) => {
+      if (editingOperationId) {
+        return current.map((currentOperation) =>
+          currentOperation.id === editingOperationId ? operation : currentOperation,
+        )
+      }
+
+      return [operation, ...current]
+    })
+    markLocalSave()
+
     try {
       const savedOperation = await saveOperationToSupabase(operation)
 
-      setOperations((current) => {
-        if (editingOperationId) {
-          return current.map((currentOperation) =>
-            currentOperation.id === editingOperationId
-              ? savedOperation
-              : currentOperation,
-          )
-        }
-
-        return [savedOperation, ...current]
-      })
+      setOperations((current) =>
+        current.map((currentOperation) =>
+          currentOperation.id === operation.id ? savedOperation : currentOperation,
+        ),
+      )
       setSaveStatus('Guardado online activo')
     } catch (error) {
       console.error(error)
-      window.alert('No se pudo guardar en Supabase. Revisá la conexión y probá de nuevo.')
-      setSaveStatus('Error al guardar en Supabase')
-      return
+      markLocalSave()
     }
 
     setFilters(defaultRegisterFilters)
@@ -765,6 +842,11 @@ function App() {
 
     if (!confirmed) return
 
+    setOperations((current) =>
+      current.filter((currentOperation) => currentOperation.id !== operation.id),
+    )
+    markLocalSave()
+
     try {
       if (supabase && typeof operation.id === 'string') {
         const { error } = await supabase
@@ -774,15 +856,10 @@ function App() {
         if (error) throw error
       }
 
-      setOperations((current) =>
-        current.filter((currentOperation) => currentOperation.id !== operation.id),
-      )
       setSaveStatus('Guardado online activo')
     } catch (error) {
       console.error(error)
-      window.alert('No se pudo eliminar en Supabase. Revisá la conexión y probá de nuevo.')
-      setSaveStatus('Error al eliminar en Supabase')
-      return
+      markLocalSave()
     }
 
     setFilters(defaultRegisterFilters)
@@ -914,6 +991,11 @@ function App() {
 
     if (!confirmed) return
 
+    setProducts((current) =>
+      current.filter((currentProduct) => currentProduct.id !== productId),
+    )
+    markLocalSave()
+
     try {
       if (supabase && typeof productId === 'string') {
         const { error } = await supabase
@@ -923,14 +1005,10 @@ function App() {
         if (error) throw error
       }
 
-      setProducts((current) =>
-        current.filter((currentProduct) => currentProduct.id !== productId),
-      )
       setSaveStatus('Guardado online activo')
     } catch (error) {
       console.error(error)
-      window.alert('No se pudo eliminar el producto en Supabase.')
-      setSaveStatus('Error al eliminar en Supabase')
+      markLocalSave()
     }
   }
 
@@ -947,22 +1025,27 @@ function App() {
       status: productForm.status,
     }
 
+    setProducts((current) => {
+      if (!editingProductId) return [product, ...current]
+
+      return current.map((currentProduct) =>
+        currentProduct.id === editingProductId ? product : currentProduct,
+      )
+    })
+    markLocalSave()
+
     try {
       const savedProduct = await saveProductToSupabase(product)
 
-      setProducts((current) => {
-        if (!editingProductId) return [savedProduct, ...current]
-
-        return current.map((currentProduct) =>
-          currentProduct.id === editingProductId ? savedProduct : currentProduct,
-        )
-      })
+      setProducts((current) =>
+        current.map((currentProduct) =>
+          currentProduct.id === product.id ? savedProduct : currentProduct,
+        ),
+      )
       setSaveStatus('Guardado online activo')
     } catch (error) {
       console.error(error)
-      window.alert('No se pudo guardar el producto en Supabase.')
-      setSaveStatus('Error al guardar en Supabase')
-      return
+      markLocalSave()
     }
 
     setProductFilters((current) => ({
@@ -983,17 +1066,17 @@ function App() {
       (factory) => factory.toLowerCase() === cleanName.toLowerCase(),
     )
 
+    if (!alreadyExists) {
+      setFactoryOptions((current) => [...current, cleanName])
+    }
+    markLocalSave()
+
     try {
       await getFactoryId(cleanName)
-      if (!alreadyExists) {
-        setFactoryOptions((current) => [...current, cleanName])
-      }
       setSaveStatus('Guardado online activo')
     } catch (error) {
       console.error(error)
-      window.alert('No se pudo guardar la fábrica en Supabase.')
-      setSaveStatus('Error al guardar en Supabase')
-      return
+      markLocalSave()
     }
 
     setEditingProductId(null)
@@ -1016,15 +1099,20 @@ function App() {
       note: clientForm.note.trim(),
     }
 
+    setClients((current) => [client, ...current])
+    markLocalSave()
+
     try {
       const savedClient = await saveClientToSupabase(client)
-      setClients((current) => [savedClient, ...current])
+      setClients((current) =>
+        current.map((currentClient) =>
+          currentClient.id === client.id ? savedClient : currentClient,
+        ),
+      )
       setSaveStatus('Guardado online activo')
     } catch (error) {
       console.error(error)
-      window.alert('No se pudo guardar el cliente en Supabase.')
-      setSaveStatus('Error al guardar en Supabase')
-      return
+      markLocalSave()
     }
 
     setClientForm(emptyClientForm)
@@ -1043,6 +1131,11 @@ function App() {
 
     if (!confirmed) return
 
+    setClients((current) =>
+      current.filter((currentClient) => currentClient.id !== client.id),
+    )
+    markLocalSave()
+
     try {
       if (supabase && typeof client.id === 'string') {
         const { error } = await supabase
@@ -1052,14 +1145,10 @@ function App() {
         if (error) throw error
       }
 
-      setClients((current) =>
-        current.filter((currentClient) => currentClient.id !== client.id),
-      )
       setSaveStatus('Guardado online activo')
     } catch (error) {
       console.error(error)
-      window.alert('No se pudo eliminar el cliente en Supabase.')
-      setSaveStatus('Error al eliminar en Supabase')
+      markLocalSave()
     }
   }
 
