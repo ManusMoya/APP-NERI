@@ -351,6 +351,7 @@ function App() {
   const [editingProductId, setEditingProductId] = useState(null)
   const [showClientForm, setShowClientForm] = useState(false)
   const [clientForm, setClientForm] = useState(emptyClientForm)
+  const [editingClientId, setEditingClientId] = useState(null)
   const [productFilters, setProductFilters] = useState({
     search: '',
     factory: 'Todas',
@@ -1235,17 +1236,70 @@ function App() {
     setClientForm((current) => ({ ...current, [name]: value }))
   }
 
-  async function addClient(event) {
+  function openClientForm() {
+    setEditingClientId(null)
+    setClientForm(emptyClientForm)
+    setShowClientForm(true)
+  }
+
+  function openEditClient(client) {
+    setEditingClientId(client.id)
+    setClientForm({
+      name: client.name,
+      phone: client.phone,
+      note: client.note,
+    })
+    setShowClientForm(true)
+  }
+
+  function closeClientForm() {
+    setEditingClientId(null)
+    setClientForm(emptyClientForm)
+    setShowClientForm(false)
+  }
+
+  async function updateOperationClientName(previousName, nextName) {
+    if (!previousName || previousName === nextName) return
+
+    setOperations((current) =>
+      current.map((operation) =>
+        operation.name === previousName ? { ...operation, name: nextName } : operation,
+      ),
+    )
+
+    if (!supabase) return
+
+    const { error } = await supabase
+      .from('operations')
+      .update({
+        name: nextName,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('name', previousName)
+
+    if (error) throw error
+  }
+
+  async function saveClient(event) {
     event.preventDefault()
 
+    const previousClient = editingClientId
+      ? clients.find((currentClient) => currentClient.id === editingClientId)
+      : null
     const client = {
-      id: Date.now(),
+      id: editingClientId ?? Date.now(),
       name: clientForm.name.trim(),
       phone: clientForm.phone.trim(),
       note: clientForm.note.trim(),
     }
 
-    setClients((current) => [client, ...current])
+    setClients((current) => {
+      if (!editingClientId) return [client, ...current]
+
+      return current.map((currentClient) =>
+        currentClient.id === editingClientId ? client : currentClient,
+      )
+    })
     markLocalSave()
 
     try {
@@ -1255,14 +1309,14 @@ function App() {
           currentClient.id === client.id ? savedClient : currentClient,
         ),
       )
+      await updateOperationClientName(previousClient?.name, savedClient.name)
       setSaveStatus('Guardado online activo')
     } catch (error) {
       console.error(error)
       markLocalSave()
     }
 
-    setClientForm(emptyClientForm)
-    setShowClientForm(false)
+    closeClientForm()
   }
 
   async function removeClient(client) {
@@ -1372,10 +1426,12 @@ function App() {
         <ClientsView
           clients={filteredClients}
           form={clientForm}
-          onAdd={addClient}
-          onCloseForm={() => setShowClientForm(false)}
-          onOpenForm={() => setShowClientForm(true)}
+          isEditing={Boolean(editingClientId)}
+          onCloseForm={closeClientForm}
+          onOpenEdit={openEditClient}
+          onOpenForm={openClientForm}
           onRemoveClient={removeClient}
+          onSave={saveClient}
           onSearch={setClientSearch}
           onUpdateForm={updateClientForm}
           search={clientSearch}
@@ -2045,10 +2101,12 @@ function ProductsView({
 function ClientsView({
   clients,
   form,
-  onAdd,
+  isEditing,
   onCloseForm,
+  onOpenEdit,
   onOpenForm,
   onRemoveClient,
+  onSave,
   onSearch,
   onUpdateForm,
   search,
@@ -2076,9 +2134,9 @@ function ClientsView({
       </div>
 
       {showForm && (
-        <form className="entry-form" onSubmit={onAdd}>
+        <form className="entry-form" onSubmit={onSave}>
           <div className="form-title">
-            <h2>Nuevo cliente</h2>
+            <h2>{isEditing ? 'Editar cliente' : 'Nuevo cliente'}</h2>
             <button type="button" onClick={onCloseForm}>
               Cerrar
             </button>
@@ -2111,7 +2169,7 @@ function ClientsView({
             </label>
           </div>
           <button className="save-action" type="submit">
-            Guardar cliente
+            {isEditing ? 'Guardar cambios' : 'Guardar cliente'}
           </button>
         </form>
       )}
@@ -2154,6 +2212,13 @@ function ClientsView({
                   <strong>{formatCurrency(client.total)}</strong>
                 </td>
                 <td data-label="Acción">
+                  <button
+                    className="table-action"
+                    onClick={() => onOpenEdit(client)}
+                    type="button"
+                  >
+                    Editar
+                  </button>
                   <button
                     className="table-action"
                     onClick={() => onRemoveClient(client)}
