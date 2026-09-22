@@ -12,6 +12,20 @@
   padding-bottom: 20px;
 }
 
+.brand-lockup {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.brand-logo {
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(18, 59, 46, 0.16);
+  flex: 0 0 auto;
+  height: 52px;
+  width: 52px;
+}
+
 .eyebrow {
   color: var(--muted);
   font-size: 14px;

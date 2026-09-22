@@ -1355,10 +1355,13 @@ function App() {
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <div>
-          <p className="eyebrow">Sistema de compras y ventas</p>
-          <h1>{activeTab}</h1>
-          <p className="save-status">{saveStatus}</p>
+        <div className="brand-lockup">
+          <img className="brand-logo" src="/favicon.svg" alt="APP NERI" />
+          <div>
+            <p className="eyebrow">APP NERI</p>
+            <h1>{activeTab}</h1>
+            <p className="save-status">{saveStatus}</p>
+          </div>
         </div>
 
         <nav className="main-nav" aria-label="Secciones principales">
