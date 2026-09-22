@@ -2228,7 +2228,7 @@ function ClientsView({
               <th>Cliente</th>
               <th>Teléfono</th>
               <th>Nota</th>
-              <th>Operaciones</th>
+              <th>Movimientos</th>
               <th>Pagó</th>
               <th>A cobrar</th>
               <th>Total vendido</th>
@@ -2338,7 +2338,7 @@ function BalanceView({ balance }) {
                 <td data-label="Fábrica">
                   <strong>{factory.factory}</strong>
                 </td>
-                <td data-label="Operaciones">{factory.operations}</td>
+                <td data-label="Movimientos">{factory.operations} mov.</td>
                 <td data-label="Compra">{formatCurrency(factory.purchase)}</td>
                 <td data-label="Pago">{formatCurrency(factory.payment)}</td>
                 <td data-label="Total">
