@@ -363,6 +363,7 @@ function App() {
   const [hasLoadedSupabase, setHasLoadedSupabase] = useState(false)
   const [hasSyncedLocalData, setHasSyncedLocalData] = useState(false)
   const [isHeaderCompact, setIsHeaderCompact] = useState(false)
+  const headerRef = useRef(null)
   const headerCompactRef = useRef(false)
 
   function markLocalSave() {
@@ -386,14 +387,62 @@ function App() {
   }, [factoryOptions])
 
   useEffect(() => {
-    function updateHeaderSize() {
-      const nextIsCompact =
-        headerCompactRef.current ? window.scrollY > 60 : window.scrollY > 140
+    function applyHeaderSize() {
+      const scrollStart = 0
+      const scrollEnd = 125
+      const rawProgress = Math.min(
+        1,
+        Math.max(0, (window.scrollY - scrollStart) / (scrollEnd - scrollStart)),
+      )
+      const progress = rawProgress * rawProgress * (3 - 2 * rawProgress)
+      const nextIsCompact = rawProgress >= 1
+
+      if (headerRef.current) {
+        const fullWidth = headerRef.current.parentElement?.clientWidth || 0
+        const compactWidth = window.innerWidth <= 900 ? 54 : 56
+        const headerWidth = Math.max(
+          compactWidth,
+          fullWidth - (fullWidth - compactWidth) * progress,
+        )
+        const logoSize = 54 - 10 * progress
+        const headerPadding = 18 - 12 * progress
+        const headerGap = 24 - 24 * progress
+        const headerRadius = 16 + 34 * progress
+        const logoRadius = 16 + 34 * progress
+        const brandOpacity = Math.max(0, 1 - progress * 1.6)
+        const brandWidth = Math.max(0, 360 - 360 * progress)
+        const brandHeight = Math.max(0, 92 - 92 * progress)
+        const navOpacity = Math.max(0, 1 - progress * 2.2)
+        const navShift = 10 * progress
+        const navWidth = Math.max(0, 520 - 520 * progress)
+        const navHeight = Math.max(0, 50 - 50 * progress)
+        const navPadding = Math.max(0, 5 - 5 * progress)
+
+        headerRef.current.style.setProperty('--header-width', `${headerWidth}px`)
+        headerRef.current.style.setProperty('--header-padding', `${headerPadding}px`)
+        headerRef.current.style.setProperty('--header-gap', `${headerGap}px`)
+        headerRef.current.style.setProperty('--header-radius', `${headerRadius}px`)
+        headerRef.current.style.setProperty('--logo-size', `${logoSize}px`)
+        headerRef.current.style.setProperty('--logo-radius', `${logoRadius}px`)
+        headerRef.current.style.setProperty('--brand-opacity', brandOpacity)
+        headerRef.current.style.setProperty('--brand-width', `${brandWidth}px`)
+        headerRef.current.style.setProperty('--brand-height', `${brandHeight}px`)
+        headerRef.current.style.setProperty('--nav-opacity', navOpacity)
+        headerRef.current.style.setProperty('--nav-shift', `${navShift}px`)
+        headerRef.current.style.setProperty('--nav-width', `${navWidth}px`)
+        headerRef.current.style.setProperty('--nav-height', `${navHeight}px`)
+        headerRef.current.style.setProperty('--nav-padding', `${navPadding}px`)
+        headerRef.current.classList.toggle('is-compact', nextIsCompact)
+      }
 
       if (nextIsCompact !== headerCompactRef.current) {
         headerCompactRef.current = nextIsCompact
         setIsHeaderCompact(nextIsCompact)
       }
+    }
+
+    function updateHeaderSize() {
+      applyHeaderSize()
     }
 
     updateHeaderSize()
@@ -1382,38 +1431,43 @@ function App() {
 
   return (
     <main className="app-shell">
-      <header className={`top-bar${isHeaderCompact ? ' is-compact' : ''}`}>
-        <div className="brand-lockup">
-          <button
-            aria-label={
-              isHeaderCompact ? 'Volver arriba' : 'Logo de APP NERI'
-            }
-            className="brand-logo-button"
-            onClick={scrollToTopFromHeader}
-            type="button"
-          >
-            <img className="brand-logo" src="/favicon.svg" alt="" />
-          </button>
-          <div className="brand-copy">
-            <p className="eyebrow">APP NERI</p>
-            <h1>{activeTab}</h1>
-            <p className="save-status">{saveStatus}</p>
-          </div>
-        </div>
-
-        <nav className="main-nav" aria-label="Secciones principales">
-          {tabs.map((tab) => (
+      <div className="top-bar-slot">
+        <header
+          className={`top-bar${isHeaderCompact ? ' is-compact' : ''}`}
+          ref={headerRef}
+        >
+          <div className="brand-lockup">
             <button
-              className={activeTab === tab ? 'active' : ''}
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              aria-label={
+                isHeaderCompact ? 'Volver arriba' : 'Logo de APP NERI'
+              }
+              className="brand-logo-button"
+              onClick={scrollToTopFromHeader}
               type="button"
             >
-              {tab}
+              <img className="brand-logo" src="/favicon.svg" alt="" />
             </button>
-          ))}
-        </nav>
-      </header>
+            <div className="brand-copy">
+              <p className="eyebrow">APP NERI</p>
+              <h1>{activeTab}</h1>
+              <p className="save-status">{saveStatus}</p>
+            </div>
+          </div>
+
+          <nav className="main-nav" aria-label="Secciones principales">
+            {tabs.map((tab) => (
+              <button
+                className={activeTab === tab ? 'active' : ''}
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                type="button"
+              >
+                {tab}
+              </button>
+            ))}
+          </nav>
+        </header>
+      </div>
 
       {activeTab === 'REGISTRO' && (
         <RegisterView

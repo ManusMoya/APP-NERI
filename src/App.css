@@ -3,52 +3,46 @@
   padding: 30px;
 }
 
+.top-bar-slot {
+  height: 128px;
+  pointer-events: none;
+  position: sticky;
+  top: 16px;
+  z-index: 10;
+}
+
 .top-bar {
   align-items: center;
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(223, 229, 222, 0.85);
-  border-radius: 16px;
+  border-radius: var(--header-radius, 16px);
   box-shadow: var(--small-shadow);
   display: flex;
-  gap: 24px;
-  justify-content: space-between;
+  gap: var(--header-gap, 24px);
+  justify-content: start;
   margin: 0 auto;
   max-width: 100%;
   overflow: hidden;
-  padding: 18px;
-  position: sticky;
-  top: 16px;
+  padding: var(--header-padding, 18px);
+  pointer-events: auto;
+  position: relative;
   transition:
-    background 180ms ease,
-    border-radius 180ms ease,
-    box-shadow 180ms ease;
+    background 220ms ease,
+    box-shadow 220ms ease;
+  width: var(--header-width, 100%);
+  will-change: width;
   z-index: 10;
 }
 
 .top-bar.is-compact {
   background: rgba(255, 255, 255, 0.88);
-  border-radius: 999px;
   box-shadow: 0 12px 34px rgba(29, 37, 32, 0.1);
-  gap: 0;
-  max-width: 56px;
-  overflow: visible;
-  padding: 6px;
 }
 
 .top-bar.is-compact:hover,
 .top-bar.is-compact:focus-within {
-  max-width: 56px;
-  padding: 6px;
-}
-
-.top-bar.is-compact::after {
-  content: "";
-  height: 68px;
-  left: 100%;
-  position: absolute;
-  top: -6px;
-  width: 14px;
-  z-index: 1;
+  padding: 6px 8px 6px 6px;
+  width: min(560px, calc(100vw - 60px));
 }
 
 .brand-lockup {
@@ -68,28 +62,26 @@
 }
 
 .brand-logo {
-  border-radius: 16px;
+  border-radius: var(--logo-radius, 16px);
   box-shadow: 0 10px 26px rgba(18, 59, 46, 0.18);
   flex: 0 0 auto;
-  height: 54px;
-  transition:
-    border-radius 180ms ease,
-    height 180ms ease,
-    width 180ms ease;
-  width: 54px;
+  height: var(--logo-size, 54px);
+  transition: box-shadow 220ms ease;
+  width: var(--logo-size, 54px);
 }
 
 .top-bar.is-compact .brand-logo {
-  border-radius: 999px;
-  height: 44px;
-  width: 44px;
+  height: var(--logo-size, 44px);
+  width: var(--logo-size, 44px);
 }
 
 .brand-copy {
+  max-height: var(--brand-height, 92px);
+  max-width: var(--brand-width, 360px);
   min-width: 0;
-  transition:
-    max-width 160ms ease,
-    opacity 140ms ease;
+  opacity: var(--brand-opacity, 1);
+  overflow: hidden;
+  transform: translateX(calc(var(--nav-shift, 0px) * -0.5));
 }
 
 .eyebrow {
@@ -112,16 +104,8 @@
 }
 
 .top-bar.is-compact .brand-copy {
-  max-width: 0;
-  opacity: 0;
-  overflow: hidden;
-}
-
-.top-bar.is-compact .eyebrow,
-.top-bar.is-compact .save-status {
-  margin: 0;
-  max-height: 0;
-  opacity: 0;
+  max-width: var(--brand-width, 0);
+  opacity: var(--brand-opacity, 0);
   overflow: hidden;
 }
 
@@ -136,14 +120,6 @@ h3 {
 h1 {
   font-size: 34px;
   font-weight: 760;
-  transition: font-size 180ms ease;
-}
-
-.top-bar.is-compact h1 {
-  font-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 h2 {
@@ -157,44 +133,51 @@ h3 {
 }
 
 .main-nav {
-  background: #edf2ee;
-  border: 1px solid var(--border);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 14px;
   display: flex;
   gap: 3px;
-  padding: 5px;
-  transition:
-    opacity 160ms ease,
-    transform 180ms ease;
+  justify-content: space-between;
+  margin-left: auto;
+  max-height: var(--nav-height, 50px);
+  max-width: var(--nav-width, 520px);
+  opacity: var(--nav-opacity, 1);
+  overflow: hidden;
+  padding: var(--nav-padding, 5px);
+  transform: translateX(var(--nav-shift, 0));
+  transition: border-color 160ms ease;
 }
 
 .top-bar.is-compact .main-nav {
-  box-shadow: 0 12px 30px rgba(29, 37, 32, 0.12);
-  left: calc(100% + 10px);
-  max-width: none;
-  opacity: 0;
-  padding: 4px;
+  border-color: transparent;
+  max-width: var(--nav-width, 0);
+  opacity: var(--nav-opacity, 0);
+  overflow: hidden;
+  padding: var(--nav-padding, 0);
   pointer-events: none;
-  position: absolute;
-  top: 5px;
-  transform: translateX(-8px) scale(0.98);
+  transform: translateX(calc(var(--nav-shift, 0px) * -1));
   transform-origin: left center;
   transition:
-    opacity 150ms ease 90ms,
-    transform 190ms cubic-bezier(0.2, 0.9, 0.2, 1) 90ms,
-    visibility 0s linear 250ms;
-  visibility: hidden;
-  width: max-content;
-  z-index: 2;
+    margin 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    max-width 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    padding 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  white-space: nowrap;
 }
 
 .top-bar.is-compact:hover .main-nav,
 .top-bar.is-compact:focus-within .main-nav {
+  flex: 1 1 auto;
+  margin-left: 10px;
+  max-height: 44px;
+  max-width: 470px;
   opacity: 1;
+  padding: 4px;
   pointer-events: auto;
-  transform: translateX(0) scale(1);
-  transition-delay: 0s;
-  visibility: visible;
+  transform: translateX(0);
+  width: 100%;
 }
 
 button,
@@ -214,6 +197,7 @@ button {
   color: var(--muted);
   min-height: 38px;
   padding: 0 16px;
+  white-space: nowrap;
   transition:
     background 150ms ease,
     color 150ms ease,
@@ -221,6 +205,7 @@ button {
 }
 
 .top-bar.is-compact .main-nav button {
+  flex: 1 1 auto;
   font-size: 13px;
   min-height: 34px;
   padding: 0 12px;
@@ -676,11 +661,6 @@ tbody tr:last-child td {
     display: grid;
   }
 
-  .top-bar.is-compact {
-    align-items: center;
-    display: flex;
-  }
-
   .main-nav {
     overflow-x: auto;
   }
@@ -718,36 +698,43 @@ tbody tr:last-child td {
     top: 10px;
   }
 
+  .top-bar-slot {
+    top: 10px;
+  }
+
   .top-bar.is-compact,
   .top-bar.is-compact:hover,
   .top-bar.is-compact:focus-within {
-    border-radius: 999px;
+    align-items: center;
     display: flex;
+    flex-direction: row;
     gap: 0;
+    margin-left: auto;
+    margin-right: auto;
     max-width: 54px;
     padding: 5px;
+    width: var(--header-width, 54px);
   }
 
   .top-bar.is-compact .brand-logo {
-    height: 44px;
-    width: 44px;
-  }
-
-  .top-bar.is-compact::after {
-    display: none;
+    height: var(--logo-size, 44px);
+    width: var(--logo-size, 44px);
   }
 
   .top-bar.is-compact .brand-copy,
   .top-bar.is-compact:hover .brand-copy,
   .top-bar.is-compact:focus-within .brand-copy {
-    max-width: 0;
-    opacity: 0;
+    max-width: var(--brand-width, 0);
+    opacity: var(--brand-opacity, 0);
     overflow: hidden;
   }
 
   .top-bar.is-compact .main-nav,
   .top-bar.is-compact:hover .main-nav,
   .top-bar.is-compact:focus-within .main-nav {
+    border-color: transparent;
+    margin-left: 0;
+    margin-right: 0;
     max-width: 0;
     opacity: 0;
     overflow: hidden;
