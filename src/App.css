@@ -694,12 +694,31 @@ tbody tr:last-child td {
     padding: 14px;
   }
 
-  .top-bar {
+  .top-bar-slot {
+    height: 270px;
     top: 10px;
   }
 
-  .top-bar-slot {
-    top: 10px;
+  .top-bar {
+    align-items: start;
+    gap: 18px;
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+
+  .brand-lockup {
+    align-items: center;
+    width: 100%;
+  }
+
+  .main-nav {
+    background: #edf2ee;
+    border-color: var(--border);
+    justify-content: flex-start;
+    margin-left: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    width: 100%;
   }
 
   .top-bar.is-compact,
