@@ -387,10 +387,8 @@ function App() {
 
   useEffect(() => {
     function updateHeaderSize() {
-      const canCompact = window.innerWidth > 900
       const nextIsCompact =
-        canCompact &&
-        (headerCompactRef.current ? window.scrollY > 60 : window.scrollY > 140)
+        headerCompactRef.current ? window.scrollY > 60 : window.scrollY > 140
 
       if (nextIsCompact !== headerCompactRef.current) {
         headerCompactRef.current = nextIsCompact
@@ -406,6 +404,12 @@ function App() {
       window.removeEventListener('resize', updateHeaderSize)
     }
   }, [])
+
+  function scrollToTopFromHeader() {
+    if (isHeaderCompact) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
 
   useEffect(() => {
     async function loadSupabaseData() {
@@ -1380,8 +1384,17 @@ function App() {
     <main className="app-shell">
       <header className={`top-bar${isHeaderCompact ? ' is-compact' : ''}`}>
         <div className="brand-lockup">
-          <img className="brand-logo" src="/favicon.svg" alt="APP NERI" />
-          <div>
+          <button
+            aria-label={
+              isHeaderCompact ? 'Volver arriba' : 'Logo de APP NERI'
+            }
+            className="brand-logo-button"
+            onClick={scrollToTopFromHeader}
+            type="button"
+          >
+            <img className="brand-logo" src="/favicon.svg" alt="" />
+          </button>
+          <div className="brand-copy">
             <p className="eyebrow">APP NERI</p>
             <h1>{activeTab}</h1>
             <p className="save-status">{saveStatus}</p>

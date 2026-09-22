@@ -22,18 +22,26 @@
     background 180ms ease,
     border-radius 180ms ease,
     box-shadow 180ms ease,
+    gap 180ms ease,
     max-width 180ms ease,
     padding 180ms ease;
   z-index: 10;
 }
 
-.top-bar.is-compact:not(:hover):not(:focus-within) {
+.top-bar.is-compact {
   background: rgba(255, 255, 255, 0.88);
   border-radius: 999px;
   box-shadow: 0 12px 34px rgba(29, 37, 32, 0.1);
+  gap: 8px;
+  max-width: 56px;
+  padding: 6px;
+}
+
+.top-bar.is-compact:hover,
+.top-bar.is-compact:focus-within {
   gap: 10px;
-  max-width: 330px;
-  padding: 8px 14px;
+  max-width: 560px;
+  padding: 6px 8px;
 }
 
 .brand-lockup {
@@ -41,6 +49,15 @@
   display: flex;
   gap: 14px;
   min-width: 0;
+}
+
+.brand-logo-button {
+  background: transparent;
+  border-radius: 999px;
+  display: grid;
+  flex: 0 0 auto;
+  padding: 0;
+  place-items: center;
 }
 
 .brand-logo {
@@ -55,10 +72,17 @@
   width: 54px;
 }
 
-.top-bar.is-compact:not(:hover):not(:focus-within) .brand-logo {
-  border-radius: 12px;
-  height: 34px;
-  width: 34px;
+.top-bar.is-compact .brand-logo {
+  border-radius: 999px;
+  height: 44px;
+  width: 44px;
+}
+
+.brand-copy {
+  min-width: 0;
+  transition:
+    max-width 160ms ease,
+    opacity 140ms ease;
 }
 
 .eyebrow {
@@ -80,8 +104,14 @@
     opacity 180ms ease;
 }
 
-.top-bar.is-compact:not(:hover):not(:focus-within) .eyebrow,
-.top-bar.is-compact:not(:hover):not(:focus-within) .save-status {
+.top-bar.is-compact .brand-copy {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.top-bar.is-compact .eyebrow,
+.top-bar.is-compact .save-status {
   margin: 0;
   max-height: 0;
   opacity: 0;
@@ -102,8 +132,8 @@ h1 {
   transition: font-size 180ms ease;
 }
 
-.top-bar.is-compact:not(:hover):not(:focus-within) h1 {
-  font-size: 18px;
+.top-bar.is-compact h1 {
+  font-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -132,7 +162,7 @@ h3 {
     transform 180ms ease;
 }
 
-.top-bar.is-compact:not(:hover):not(:focus-within) .main-nav {
+.top-bar.is-compact .main-nav {
   max-width: 0;
   opacity: 0;
   overflow: hidden;
@@ -140,6 +170,15 @@ h3 {
   padding-right: 0;
   pointer-events: none;
   transform: translateX(12px);
+}
+
+.top-bar.is-compact:hover .main-nav,
+.top-bar.is-compact:focus-within .main-nav {
+  max-width: 490px;
+  opacity: 1;
+  padding: 4px;
+  pointer-events: auto;
+  transform: none;
 }
 
 button,
@@ -163,6 +202,12 @@ button {
     background 150ms ease,
     color 150ms ease,
     transform 150ms ease;
+}
+
+.top-bar.is-compact .main-nav button {
+  font-size: 13px;
+  min-height: 34px;
+  padding: 0 12px;
 }
 
 .main-nav button.active {
@@ -615,41 +660,9 @@ tbody tr:last-child td {
     display: grid;
   }
 
-  .top-bar.is-compact:not(:hover):not(:focus-within) {
-    border-radius: 16px;
-    gap: 16px;
-    max-width: 100%;
-    padding: 14px;
-  }
-
-  .top-bar.is-compact:not(:hover):not(:focus-within) .brand-logo {
-    border-radius: 14px;
-    height: 44px;
-    width: 44px;
-  }
-
-  .top-bar.is-compact:not(:hover):not(:focus-within) h1 {
-    font-size: 26px;
-  }
-
-  .top-bar.is-compact:not(:hover):not(:focus-within) .eyebrow,
-  .top-bar.is-compact:not(:hover):not(:focus-within) .save-status {
-    margin: 0 0 6px;
-    max-height: none;
-    opacity: 1;
-  }
-
-  .top-bar.is-compact:not(:hover):not(:focus-within) .save-status {
-    margin: 8px 0 0;
-  }
-
-  .top-bar.is-compact:not(:hover):not(:focus-within) .main-nav {
-    max-width: 100%;
-    opacity: 1;
-    overflow-x: auto;
-    padding: 5px;
-    pointer-events: auto;
-    transform: none;
+  .top-bar.is-compact {
+    align-items: center;
+    display: flex;
   }
 
   .main-nav {
@@ -683,6 +696,44 @@ tbody tr:last-child td {
 @media (max-width: 620px) {
   .app-shell {
     padding: 14px;
+  }
+
+  .top-bar {
+    top: 10px;
+  }
+
+  .top-bar.is-compact,
+  .top-bar.is-compact:hover,
+  .top-bar.is-compact:focus-within {
+    border-radius: 999px;
+    display: flex;
+    gap: 0;
+    max-width: 54px;
+    padding: 5px;
+  }
+
+  .top-bar.is-compact .brand-logo {
+    height: 44px;
+    width: 44px;
+  }
+
+  .top-bar.is-compact .brand-copy,
+  .top-bar.is-compact:hover .brand-copy,
+  .top-bar.is-compact:focus-within .brand-copy {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+
+  .top-bar.is-compact .main-nav,
+  .top-bar.is-compact:hover .main-nav,
+  .top-bar.is-compact:focus-within .main-nav {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding: 0;
+    pointer-events: none;
+    transform: none;
   }
 
   h1 {
