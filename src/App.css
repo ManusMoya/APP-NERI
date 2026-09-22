@@ -1,15 +1,21 @@
 .app-shell {
   min-height: 100vh;
-  padding: 28px;
+  padding: 30px;
 }
 
 .top-bar {
-  align-items: end;
-  border-bottom: 1px solid var(--border);
+  align-items: center;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(223, 229, 222, 0.85);
+  border-radius: 16px;
+  box-shadow: var(--small-shadow);
   display: flex;
   gap: 24px;
   justify-content: space-between;
-  padding-bottom: 20px;
+  padding: 18px;
+  position: sticky;
+  top: 16px;
+  z-index: 10;
 }
 
 .brand-lockup {
@@ -19,11 +25,11 @@
 }
 
 .brand-logo {
-  border-radius: 14px;
-  box-shadow: 0 8px 22px rgba(18, 59, 46, 0.16);
+  border-radius: 16px;
+  box-shadow: 0 10px 26px rgba(18, 59, 46, 0.18);
   flex: 0 0 auto;
-  height: 52px;
-  width: 52px;
+  height: 54px;
+  width: 54px;
 }
 
 .eyebrow {
@@ -33,8 +39,9 @@
 }
 
 .save-status {
-  color: var(--muted);
+  color: var(--accent);
   font-size: 12px;
+  font-weight: 700;
   margin: 8px 0 0;
 }
 
@@ -47,8 +54,8 @@ h3 {
 }
 
 h1 {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 34px;
+  font-weight: 760;
 }
 
 h2 {
@@ -62,11 +69,12 @@ h3 {
 }
 
 .main-nav {
-  background: var(--surface);
+  background: #edf2ee;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 14px;
   display: flex;
-  padding: 4px;
+  gap: 3px;
+  padding: 5px;
 }
 
 button,
@@ -82,23 +90,27 @@ button {
 
 .main-nav button {
   background: transparent;
-  border-radius: 6px;
+  border-radius: 10px;
   color: var(--muted);
   min-height: 38px;
-  padding: 0 14px;
+  padding: 0 16px;
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
 }
 
 .main-nav button.active {
   background: var(--white);
-  box-shadow: var(--small-shadow);
+  box-shadow: 0 6px 16px rgba(29, 37, 32, 0.08);
   color: var(--text);
   font-weight: 700;
 }
 
 .page-view {
   display: grid;
-  gap: 18px;
-  padding-top: 22px;
+  gap: 20px;
+  padding-top: 24px;
 }
 
 .actions-row {
@@ -115,23 +127,40 @@ button {
 .primary-action,
 .secondary-action,
 .save-action {
-  border-radius: 7px;
-  min-height: 44px;
-  padding: 0 18px;
+  border-radius: 12px;
+  min-height: 46px;
+  padding: 0 20px;
+  transition:
+    box-shadow 150ms ease,
+    transform 150ms ease,
+    background 150ms ease;
 }
 
 .primary-action,
 .save-action {
   background: var(--accent);
+  box-shadow: 0 10px 22px rgba(23, 105, 76, 0.16);
   color: var(--white);
   font-weight: 700;
 }
 
+.primary-action:hover,
+.save-action:hover {
+  background: var(--accent-strong);
+  transform: translateY(-1px);
+}
+
 .secondary-action {
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.82);
   border: 1px solid var(--border);
   color: var(--text);
   font-weight: 700;
+}
+
+.secondary-action:hover,
+.table-action:hover {
+  background: var(--accent-soft);
+  border-color: rgba(23, 105, 76, 0.24);
 }
 
 .icon-action {
@@ -150,7 +179,7 @@ button {
 .placeholder-view {
   background: var(--white);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 16px;
   box-shadow: var(--small-shadow);
 }
 
@@ -174,7 +203,7 @@ button {
 
 .modal-window {
   animation: modalPop 220ms ease-out;
-  border-radius: 18px;
+  border-radius: 22px;
   box-shadow: 0 24px 70px rgba(22, 30, 25, 0.24);
   max-height: calc(100vh - 44px);
   max-width: 860px;
@@ -219,10 +248,13 @@ input,
 select {
   background: var(--white);
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: 12px;
   color: var(--text);
-  min-height: 40px;
-  padding: 0 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 input:focus,
@@ -239,7 +271,7 @@ button:focus-visible {
 
 .product-loader {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 14px;
   display: grid;
   gap: 14px;
   padding: 16px;
@@ -270,7 +302,7 @@ button:focus-visible {
 
 .line-items {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 14px;
   overflow: hidden;
 }
 
@@ -332,7 +364,7 @@ button:focus-visible {
   background: var(--white);
   display: grid;
   gap: 4px;
-  padding: 16px;
+  padding: 18px;
 }
 
 .summary-row span {
@@ -342,7 +374,7 @@ button:focus-visible {
 
 .summary-row strong {
   color: var(--text);
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .table-wrap {
@@ -364,7 +396,7 @@ td {
 }
 
 th {
-  background: var(--surface);
+  background: #f0f4f1;
   color: var(--muted);
   font-size: 13px;
   font-weight: 700;
@@ -391,9 +423,9 @@ td:nth-child(8) {
 }
 
 .table-action {
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.78);
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: 10px;
   color: var(--text);
   min-height: 34px;
   padding: 0 12px;
@@ -467,7 +499,7 @@ tbody tr:last-child td {
 .simple-panel {
   background: var(--white);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 16px;
   box-shadow: var(--small-shadow);
   padding: 20px;
 }

@@ -1486,7 +1486,7 @@ function RegisterView({
           onClick={() => onOpenForm('venta')}
           type="button"
         >
-          + Nueva venta / pedido
+          + Nueva venta
         </button>
         <button
           className="secondary-action"
@@ -1508,7 +1508,7 @@ function RegisterView({
         <div className="modal-backdrop" role="presentation">
           <form
             aria-label={
-              formType === 'venta' ? 'Nueva venta o pedido' : 'Nueva compra'
+              formType === 'venta' ? 'Nueva venta' : 'Nueva compra'
             }
             className="entry-form modal-window"
             onSubmit={onAdd}
@@ -1518,7 +1518,7 @@ function RegisterView({
                 {isEditing
                   ? 'Editar operación'
                   : formType === 'venta'
-                  ? 'Nueva venta / pedido'
+                  ? 'Nueva venta'
                   : 'Nueva compra'}
               </h2>
               <button type="button" onClick={onCloseForm}>
