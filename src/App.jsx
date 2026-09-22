@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { excelOperations } from './importedExcelData'
 import { supabase } from './lib/supabaseClient'
 import './App.css'
@@ -363,6 +363,7 @@ function App() {
   const [hasLoadedSupabase, setHasLoadedSupabase] = useState(false)
   const [hasSyncedLocalData, setHasSyncedLocalData] = useState(false)
   const [isHeaderCompact, setIsHeaderCompact] = useState(false)
+  const headerCompactRef = useRef(false)
 
   function markLocalSave() {
     setSaveStatus('Guardado en este navegador')
@@ -386,12 +387,24 @@ function App() {
 
   useEffect(() => {
     function updateHeaderSize() {
-      setIsHeaderCompact(window.scrollY > 90)
+      const canCompact = window.innerWidth > 900
+      const nextIsCompact =
+        canCompact &&
+        (headerCompactRef.current ? window.scrollY > 60 : window.scrollY > 140)
+
+      if (nextIsCompact !== headerCompactRef.current) {
+        headerCompactRef.current = nextIsCompact
+        setIsHeaderCompact(nextIsCompact)
+      }
     }
 
     updateHeaderSize()
     window.addEventListener('scroll', updateHeaderSize, { passive: true })
-    return () => window.removeEventListener('scroll', updateHeaderSize)
+    window.addEventListener('resize', updateHeaderSize)
+    return () => {
+      window.removeEventListener('scroll', updateHeaderSize)
+      window.removeEventListener('resize', updateHeaderSize)
+    }
   }, [])
 
   useEffect(() => {
