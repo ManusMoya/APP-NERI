@@ -362,6 +362,7 @@ function App() {
   const [newFactoryName, setNewFactoryName] = useState('')
   const [hasLoadedSupabase, setHasLoadedSupabase] = useState(false)
   const [hasSyncedLocalData, setHasSyncedLocalData] = useState(false)
+  const [isHeaderCompact, setIsHeaderCompact] = useState(false)
 
   function markLocalSave() {
     setSaveStatus('Guardado en este navegador')
@@ -382,6 +383,16 @@ function App() {
   useEffect(() => {
     writeStoredValue(storageKeys.factories, factoryOptions)
   }, [factoryOptions])
+
+  useEffect(() => {
+    function updateHeaderSize() {
+      setIsHeaderCompact(window.scrollY > 90)
+    }
+
+    updateHeaderSize()
+    window.addEventListener('scroll', updateHeaderSize, { passive: true })
+    return () => window.removeEventListener('scroll', updateHeaderSize)
+  }, [])
 
   useEffect(() => {
     async function loadSupabaseData() {
@@ -1354,7 +1365,7 @@ function App() {
 
   return (
     <main className="app-shell">
-      <header className="top-bar">
+      <header className={`top-bar${isHeaderCompact ? ' is-compact' : ''}`}>
         <div className="brand-lockup">
           <img className="brand-logo" src="/favicon.svg" alt="APP NERI" />
           <div>

@@ -12,16 +12,35 @@
   display: flex;
   gap: 24px;
   justify-content: space-between;
+  margin: 0 auto;
+  max-width: 100%;
+  overflow: hidden;
   padding: 18px;
   position: sticky;
   top: 16px;
+  transition:
+    background 180ms ease,
+    border-radius 180ms ease,
+    box-shadow 180ms ease,
+    max-width 180ms ease,
+    padding 180ms ease;
   z-index: 10;
+}
+
+.top-bar.is-compact:not(:hover):not(:focus-within) {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 999px;
+  box-shadow: 0 12px 34px rgba(29, 37, 32, 0.1);
+  gap: 10px;
+  max-width: 330px;
+  padding: 8px 14px;
 }
 
 .brand-lockup {
   align-items: center;
   display: flex;
   gap: 14px;
+  min-width: 0;
 }
 
 .brand-logo {
@@ -29,13 +48,26 @@
   box-shadow: 0 10px 26px rgba(18, 59, 46, 0.18);
   flex: 0 0 auto;
   height: 54px;
+  transition:
+    border-radius 180ms ease,
+    height 180ms ease,
+    width 180ms ease;
   width: 54px;
+}
+
+.top-bar.is-compact:not(:hover):not(:focus-within) .brand-logo {
+  border-radius: 12px;
+  height: 34px;
+  width: 34px;
 }
 
 .eyebrow {
   color: var(--muted);
   font-size: 14px;
   margin: 0 0 6px;
+  transition:
+    max-height 180ms ease,
+    opacity 180ms ease;
 }
 
 .save-status {
@@ -43,6 +75,17 @@
   font-size: 12px;
   font-weight: 700;
   margin: 8px 0 0;
+  transition:
+    max-height 180ms ease,
+    opacity 180ms ease;
+}
+
+.top-bar.is-compact:not(:hover):not(:focus-within) .eyebrow,
+.top-bar.is-compact:not(:hover):not(:focus-within) .save-status {
+  margin: 0;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
 }
 
 h1,
@@ -56,6 +99,14 @@ h3 {
 h1 {
   font-size: 34px;
   font-weight: 760;
+  transition: font-size 180ms ease;
+}
+
+.top-bar.is-compact:not(:hover):not(:focus-within) h1 {
+  font-size: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 h2 {
@@ -75,6 +126,20 @@ h3 {
   display: flex;
   gap: 3px;
   padding: 5px;
+  transition:
+    max-width 180ms ease,
+    opacity 160ms ease,
+    transform 180ms ease;
+}
+
+.top-bar.is-compact:not(:hover):not(:focus-within) .main-nav {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding-left: 0;
+  padding-right: 0;
+  pointer-events: none;
+  transform: translateX(12px);
 }
 
 button,
