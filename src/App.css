@@ -21,10 +21,7 @@
   transition:
     background 180ms ease,
     border-radius 180ms ease,
-    box-shadow 180ms ease,
-    gap 180ms ease,
-    max-width 180ms ease,
-    padding 180ms ease;
+    box-shadow 180ms ease;
   z-index: 10;
 }
 
@@ -32,16 +29,16 @@
   background: rgba(255, 255, 255, 0.88);
   border-radius: 999px;
   box-shadow: 0 12px 34px rgba(29, 37, 32, 0.1);
-  gap: 8px;
+  gap: 0;
   max-width: 56px;
+  overflow: visible;
   padding: 6px;
 }
 
 .top-bar.is-compact:hover,
 .top-bar.is-compact:focus-within {
-  gap: 10px;
-  max-width: 560px;
-  padding: 6px 8px;
+  max-width: 56px;
+  padding: 6px;
 }
 
 .brand-lockup {
@@ -157,28 +154,29 @@ h3 {
   gap: 3px;
   padding: 5px;
   transition:
-    max-width 180ms ease,
     opacity 160ms ease,
     transform 180ms ease;
 }
 
 .top-bar.is-compact .main-nav {
-  max-width: 0;
+  left: calc(100% + 10px);
+  max-width: none;
   opacity: 0;
-  overflow: hidden;
-  padding-left: 0;
-  padding-right: 0;
+  padding: 4px;
   pointer-events: none;
-  transform: translateX(12px);
+  position: absolute;
+  top: 5px;
+  transform: translateX(-8px);
+  visibility: hidden;
+  width: max-content;
 }
 
 .top-bar.is-compact:hover .main-nav,
 .top-bar.is-compact:focus-within .main-nav {
-  max-width: 490px;
   opacity: 1;
-  padding: 4px;
   pointer-events: auto;
   transform: none;
+  visibility: visible;
 }
 
 button,
