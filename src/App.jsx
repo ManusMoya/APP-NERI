@@ -1911,7 +1911,7 @@ function RegisterView({
               <tr key={operation.id}>
                 <td data-label="Fecha">{formatDate(operation.date)}</td>
                 <td data-label="Cliente/Fábrica">
-                  <strong>{operation.name}</strong>
+                  <strong>{getOperationDisplayName(operation)}</strong>
                   <span className="mobile-status">{operation.status}</span>
                 </td>
                 <td data-label="Fábrica">{operation.factory}</td>
@@ -2454,6 +2454,12 @@ function buildOperationDetail(items) {
   return items
     .map((item) => `${item.quantity} x ${item.productName}`)
     .join(' · ')
+}
+
+function getOperationDisplayName(operation) {
+  if (operation.name) return operation.name
+  if (operation.type === 'compra') return operation.factory
+  return ''
 }
 
 function formatCurrency(value) {
