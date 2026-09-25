@@ -994,6 +994,7 @@ function App() {
 
   async function addOperation(event) {
     event.preventDefault()
+    const hasItems = operationForm.items.length > 0
     const itemTotals = getOperationItemTotals(operationForm.items)
     const additionalExpenses = Number(operationForm.additionalExpenses) || 0
     const calculatedPurchase =
@@ -1012,19 +1013,26 @@ function App() {
       date: operationForm.date,
       name: operationFormType === 'compra' ? '' : operationForm.name.trim(),
       factory:
-        operationForm.factory.trim() ||
-        summarizeItemFactories(operationForm.items),
+        (hasItems
+          ? summarizeItemFactories(operationForm.items)
+          : operationForm.factory.trim()) ||
+        operationForm.factory.trim(),
       detail:
+        (hasItems ? buildOperationDetail(operationForm.items) : '') ||
         operationForm.detail.trim() ||
         buildOperationDetail(operationForm.items) ||
         'Sin detalle',
       status: operationForm.status,
-      purchase: Number(operationForm.purchase) || calculatedPurchase,
+      purchase: hasItems
+        ? calculatedPurchase
+        : Number(operationForm.purchase) || calculatedPurchase,
       payment:
         operationFormType === 'compra'
           ? 0
           : Number(operationForm.payment) || 0,
-      total: Number(operationForm.total) || calculatedTotal,
+      total: hasItems
+        ? calculatedTotal
+        : Number(operationForm.total) || calculatedTotal,
       additionalExpenses,
       items: operationForm.items,
     }
