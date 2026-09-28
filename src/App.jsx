@@ -153,6 +153,7 @@ function createEmptyOperationForm() {
     purchase: '',
     payment: '',
     total: '',
+    totalEdited: false,
     additionalExpenses: '',
     itemFactory: '',
     itemProductName: '',
@@ -965,6 +966,7 @@ function App() {
       purchase: String(operation.purchase),
       payment: String(operation.payment),
       total: String(operation.total),
+      totalEdited: false,
       additionalExpenses: String(operation.additionalExpenses || ''),
       items: operation.items || [],
     })
@@ -979,6 +981,7 @@ function App() {
         return {
           ...current,
           additionalExpenses: value,
+          totalEdited: false,
           purchase: current.items.length
             ? String(itemTotals.purchase + additionalExpenses)
             : current.purchase,
@@ -986,6 +989,10 @@ function App() {
             ? String(itemTotals.total + additionalExpenses)
             : current.total,
         }
+      }
+
+      if (name === 'total') {
+        return { ...current, total: value, totalEdited: true }
       }
 
       return { ...current, [name]: value }
@@ -1031,7 +1038,9 @@ function App() {
           ? 0
           : Number(operationForm.payment) || 0,
       total: hasItems
-        ? calculatedTotal
+        ? operationForm.totalEdited
+          ? Number(operationForm.total) || calculatedTotal
+          : calculatedTotal
         : Number(operationForm.total) || calculatedTotal,
       additionalExpenses,
       items: operationForm.items,
@@ -1143,6 +1152,7 @@ function App() {
         itemProductName: '',
         itemQuantity: 1,
         items,
+        totalEdited: false,
         purchase: String(
           operationFormType === 'compra'
             ? itemTotals.purchase + (Number(current.additionalExpenses) || 0)
@@ -1166,6 +1176,7 @@ function App() {
         ...current,
         factory: summarizeItemFactories(items),
         items,
+        totalEdited: false,
         purchase: items.length ? String(itemTotals.purchase) : '',
         total: items.length ? String(itemTotals.total) : '',
       }
